@@ -9,7 +9,7 @@ import {
   announcementIdParamsSchema,
   announcementsQuerySchema,
   createAnnouncementBodySchema,
-  updateAnnouncementBodySchema,
+  updateAnnouncementFieldsSchema,
 } from "./validators/announcements.validator.ts";
 
 const userSchema = z
@@ -49,11 +49,38 @@ const announcementSchema = z
     description: z.string(),
     price: z.number(),
     category: z.string(),
+    imageUrl: z.string().nullable().optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     user: userSchema,
   })
   .openapi("Announcement");
+
+const createAnnouncementMultipartSchema = createAnnouncementBodySchema
+  .extend({
+    image: z
+      .string()
+      .optional()
+      .openapi({
+        type: "string",
+        format: "binary",
+        description: "Optional announcement photo",
+      }),
+  })
+  .openapi("CreateAnnouncementMultipart");
+
+const updateAnnouncementMultipartSchema = updateAnnouncementFieldsSchema
+  .extend({
+    image: z
+      .string()
+      .optional()
+      .openapi({
+        type: "string",
+        format: "binary",
+        description: "Optional announcement photo",
+      }),
+  })
+  .openapi("UpdateAnnouncementMultipart");
 
 const announcementsListSchema = z
   .object({
@@ -298,12 +325,14 @@ registry.registerPath({
   path: "/announcements",
   tags: ["Announcements"],
   summary: "Create announcement",
+  description:
+    "Accepts multipart/form-data. Photo field `image` is optional.",
   security: [{ bearerAuth: [] }],
   request: {
     body: {
       content: {
-        "application/json": {
-          schema: createAnnouncementBodySchema,
+        "multipart/form-data": {
+          schema: createAnnouncementMultipartSchema,
         },
       },
     },
@@ -333,13 +362,15 @@ registry.registerPath({
   path: "/announcements/{id}",
   tags: ["Announcements"],
   summary: "Update own announcement",
+  description:
+    "Accepts multipart/form-data. At least one field or photo is required.",
   security: [{ bearerAuth: [] }],
   request: {
     params: announcementIdParamsSchema,
     body: {
       content: {
-        "application/json": {
-          schema: updateAnnouncementBodySchema,
+        "multipart/form-data": {
+          schema: updateAnnouncementMultipartSchema,
         },
       },
     },
