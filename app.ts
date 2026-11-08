@@ -54,6 +54,14 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     return res.status(403).json({ error: "Not allowed by CORS" });
   }
 
+  if (err instanceof Error && err.message === "Only image files are allowed") {
+    return res.status(400).json({ error: err.message });
+  }
+
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ error: "File too large" });
+  }
+
   if (err.type === "entity.parse.failed") {
     return res.status(400).json({
       error: "Validation failed",

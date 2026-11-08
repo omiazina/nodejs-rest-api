@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import prisma from "../../prisma/client.ts";
 import logger from "../logger.ts";
+import { uploadImageToCloudinary } from "../utils/cloudinary.ts";
 
 const PER_PAGE = 10;
 
@@ -16,6 +17,19 @@ const announcementInclude = {
     select: userSelect,
   },
 } as const;
+
+async function resolveImageUrl(req: Request) {
+  if (!req.file) {
+    return undefined;
+  }
+
+  const imageUrl = await uploadImageToCloudinary(req.file.path);
+  logger.info(
+    { filename: req.file.filename, imageUrl },
+    "Announcement photo uploaded",
+  );
+  return imageUrl;
+}
 
 export async function getAnnouncements(
   req: Request,
@@ -103,6 +117,7 @@ export async function createAnnouncement(
   try {
     const userId = req.user!.sub;
     const { title, description, price, category } = req.body;
+    const imageUrl = await resolveImageUrl(req);
 
     const announcement = await prisma.announcement.create({
       data: {
@@ -110,6 +125,7 @@ export async function createAnnouncement(
         description,
         price,
         category,
+        imageUrl,
         userId,
       },
       include: announcementInclude,
@@ -147,9 +163,35 @@ export async function updateAnnouncement(
       return res.status(403).json({ error: "Access denied" });
     }
 
+    const imageUrl = await resolveImageUrl(req);
+    const { title, description, price, category } = req.body;
+
+    const data: {
+      title?: string;
+      description?: string;
+      price?: number;
+      category?: string;
+      imageUrl?: string;
+    } = {};
+
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (price !== undefined) data.price = price;
+    if (category !== undefined) data.category = category;
+    if (imageUrl !== undefined) data.imageUrl = imageUrl;
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: {
+          _errors: ["At least one field must be provided"],
+        },
+      });
+    }
+
     const updated = await prisma.announcement.update({
       where: { id },
-      data: req.body,
+      data,
       include: announcementInclude,
     });
 
