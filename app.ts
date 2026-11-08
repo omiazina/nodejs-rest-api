@@ -3,6 +3,8 @@ import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import cors from "cors";
 
 import { generateOpenApiDocument } from "./src/openapi.ts";
 import "./src/openapi.paths.ts";
@@ -10,6 +12,23 @@ import authRouter from "./src/routes/auth.routes.ts";
 import announcementsRouter from "./src/routes/announcements.routes.ts";
 
 const app = express();
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(helmet());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
+  }),
+);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -27,6 +46,10 @@ app.use((_req: Request, res: Response) => {
 // Error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err);
+
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({ error: "Not allowed by CORS" });
+  }
 
   if (err.type === "entity.parse.failed") {
     return res.status(400).json({
@@ -56,10 +79,14 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Internal server error" });
 });
 
+export default app;
+
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(
-    `Server is running on port ${PORT}: http://localhost:${PORT}/api-docs`,
-  );
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(
+      `Server is running on port ${PORT}: http://localhost:${PORT}/api-docs`,
+    );
+  });
+}
