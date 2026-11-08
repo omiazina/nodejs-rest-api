@@ -7,7 +7,8 @@ function formatIssues(issues: { path: PropertyKey[]; message: string }[]) {
   const details: Record<string, string[]> = {};
 
   for (const issue of issues) {
-    const key = issue.path.length > 0 ? issue.path.map(String).join(".") : "_errors";
+    const key =
+      issue.path.length > 0 ? issue.path.map(String).join(".") : "_errors";
     if (!details[key]) {
       details[key] = [];
     }
@@ -15,6 +16,21 @@ function formatIssues(issues: { path: PropertyKey[]; message: string }[]) {
   }
 
   return details;
+}
+
+function setRequestData(req: Request, target: RequestTarget, data: unknown) {
+  if (target === "body") {
+    req.body = data;
+    return;
+  }
+
+  // Express 5 exposes query/params as getter-only properties.
+  Object.defineProperty(req, target, {
+    value: data,
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 function validate(target: RequestTarget, schema: ZodType) {
@@ -28,7 +44,7 @@ function validate(target: RequestTarget, schema: ZodType) {
       });
     }
 
-    (req as Request & Record<RequestTarget, unknown>)[target] = result.data;
+    setRequestData(req, target, result.data);
     return next();
   };
 }
