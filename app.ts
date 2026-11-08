@@ -5,7 +5,9 @@ import swaggerUi from "swagger-ui-express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import cors from "cors";
+import pinoHttp from "pino-http";
 
+import logger from "./src/logger.ts";
 import { generateOpenApiDocument } from "./src/openapi.ts";
 import "./src/openapi.paths.ts";
 import authRouter from "./src/routes/auth.routes.ts";
@@ -29,6 +31,7 @@ app.use(
     },
   }),
 );
+app.use(pinoHttp({ logger }));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -45,7 +48,7 @@ app.use((_req: Request, res: Response) => {
 
 // Error handling middleware
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err);
+  logger.error(err);
 
   if (err.message === "Not allowed by CORS") {
     return res.status(403).json({ error: "Not allowed by CORS" });

@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import bcrypt from "bcrypt";
 import prisma from "../../prisma/client.ts";
+import logger from "../logger.ts";
 import {
   createAccessToken,
   createRefreshToken,
@@ -59,6 +60,8 @@ export async function register(
       },
     });
 
+    logger.info({ userId: user.id, username: user.username }, "User registered");
+
     return res.status(201).json({
       user,
       accessToken,
@@ -100,6 +103,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
         userId: user.id,
       },
     });
+
+    logger.info({ userId: user.id, username: user.username }, "User logged in");
 
     return res.status(200).json({
       user: {

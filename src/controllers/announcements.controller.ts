@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import prisma from "../../prisma/client.ts";
+import logger from "../logger.ts";
 
 const PER_PAGE = 10;
 
@@ -113,6 +114,11 @@ export async function createAnnouncement(
       },
       include: announcementInclude,
     });
+
+    logger.info(
+      { announcementId: announcement.id, userId },
+      "Announcement created",
+    );
 
     return res.status(201).json(announcement);
   } catch (error) {
