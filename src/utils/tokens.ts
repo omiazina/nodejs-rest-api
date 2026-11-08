@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 
 const ACCESS_TOKEN_EXPIRES_IN = "15m";
@@ -18,7 +19,7 @@ export function createAccessToken(userId: number) {
 }
 
 export function createRefreshToken(userId: number) {
-  return jwt.sign({ sub: userId }, getJwtSecret(), {
+  return jwt.sign({ sub: userId, jti: randomUUID() }, getJwtSecret(), {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   });
 }
